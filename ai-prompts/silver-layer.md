@@ -498,7 +498,7 @@ Implementation review:
 ACCEPTED
 
 Databricks runtime validation:
-PENDING
+PASSED
 ```
 
 Runtime validation will occur when the functions are composed inside:
