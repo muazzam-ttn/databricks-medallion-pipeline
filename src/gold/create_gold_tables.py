@@ -6,7 +6,9 @@ from pathlib import Path
 from pyspark.sql.functions import col, sum as spark_sum
 
 GOLD_SCHEMA = "ecommerce_sales.gold"
-GOLD_DIRECTORY = Path(__file__).resolve().parent
+# Databricks notebooks do not define __file__. On current Databricks runtimes,
+# the notebook working directory is the folder containing the notebook.
+GOLD_DIRECTORY = Path.cwd()
 
 SALES_BY_PRODUCT = f"{GOLD_SCHEMA}.sales_by_product"
 REVENUE_BY_CUSTOMER = f"{GOLD_SCHEMA}.revenue_by_customer"
