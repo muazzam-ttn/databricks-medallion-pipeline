@@ -796,15 +796,14 @@ Any change must be documented.
 
 # 20. Gold Data Model
 
-The required Gold layer contains three mandatory business outputs:
+The required Gold layer contains four business outputs:
 
 ```text
 gold.sales_by_product
 gold.revenue_by_customer
 gold.customer_segmentation
+gold.daily_weekly_trends
 ```
-
-The participant guide also includes a daily/weekly trends SQL file in the repository structure, but that is treated as optional/stretch in this project.
 
 ---
 
@@ -984,27 +983,45 @@ This ensures the `Inactive` segment can exist.
 
 ---
 
-# 25. Optional Gold — Daily/Weekly Trends
+# 25. Gold — Daily/Weekly Sales Trends
 
-Repository placeholder:
+Implementation:
 
 ```text
 src/gold/03_daily_weekly_trends.sql
 ```
 
-Possible model, only if implemented later:
+Recommended table:
 
 ```text
-date_period
-period_type
-total_orders
-total_revenue
-avg_order_value
+gold.daily_weekly_trends
 ```
 
-This is not part of the current mandatory Gold model.
+## 25.1 Grain
 
-Do not implement unless core requirements and documentation are complete.
+> One row per `period_type` and `period_start`.
+
+## 25.2 Columns
+
+| Column | Type | Description |
+|---|---|---|
+| period_type | STRING | `DAILY` or `WEEKLY` |
+| period_start | DATE | Calendar date or Monday week start |
+| total_orders | BIGINT | Distinct qualifying completed orders |
+| total_revenue | DECIMAL | Revenue from qualifying completed orders |
+| avg_order_value | DECIMAL | Average qualifying completed order value |
+
+## 25.3 Eligibility and Period Rules
+
+The table uses only Silver orders where:
+
+```text
+quality_check_result = 'PASS'
+order_status = 'Completed'
+```
+
+Daily periods use `order_date`. Weekly periods use the Monday returned by
+`DATE_TRUNC('WEEK', order_date)`.
 
 ---
 
@@ -1090,10 +1107,10 @@ bronze.orders       │
     ↓               │
 silver.orders ──────┘
     │
-    ├────────────────────────────┐
-    │                            │
-    v                            v
-gold.sales_by_product    gold.revenue_by_customer
+    ├────────────────────────────┬────────────────────────────┐
+    │                            │                            │
+    v                            v                            v
+gold.sales_by_product    gold.revenue_by_customer    gold.daily_weekly_trends
 
 products.csv
     ↓
@@ -1147,6 +1164,9 @@ gold.revenue_by_customer
 
 gold.customer_segmentation
 → segment_type
+
+gold.daily_weekly_trends
+→ period_type + period_start
 ```
 
 These should be validated during testing.
@@ -1296,6 +1316,7 @@ silver.quality_metrics
 gold.sales_by_product
 gold.revenue_by_customer
 gold.customer_segmentation
+gold.daily_weekly_trends
 ```
 
 If the selected Databricks environment does not support this namespace structure, use an equivalent prefix convention.
@@ -1380,6 +1401,7 @@ The implemented pipeline should satisfy the following model-level conditions:
 - [ ] `gold.sales_by_product` has one row per product.
 - [ ] `gold.revenue_by_customer` has one row per customer.
 - [ ] `gold.customer_segmentation` has one row per segment.
+- [ ] `gold.daily_weekly_trends` has one row per period type and period start.
 - [ ] Customers with no qualifying orders can participate in the Inactive segment.
 - [ ] Gold calculations use documented analytics eligibility rules.
 - [ ] Dashboard queries consume business-ready Gold outputs.

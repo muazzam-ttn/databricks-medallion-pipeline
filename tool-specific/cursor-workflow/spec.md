@@ -768,6 +768,7 @@ Mandatory Gold tables:
 gold.sales_by_product
 gold.revenue_by_customer
 gold.customer_segmentation
+gold.daily_weekly_trends
 ```
 
 Gold should consume analytics-eligible Silver data based on a documented quality policy.
@@ -891,25 +892,32 @@ The High-Value threshold remains an explicit open decision.
 
 ---
 
-# 25. Optional Gold Scope
+# 25. Gold — Daily/Weekly Sales Trends
 
-Repository placeholder:
+Implementation:
 
 ```text
 src/gold/03_daily_weekly_trends.sql
 ```
 
-Treat this as optional/stretch.
-
-Do not implement it until:
+Output:
 
 ```text
-core pipeline works
-tests pass
-documentation is current
+ecommerce_sales.gold.daily_weekly_trends
 ```
 
-unless explicitly requested.
+Required columns:
+
+```text
+period_type
+period_start
+total_orders
+total_revenue
+avg_order_value
+```
+
+The table must contain one row per daily or Monday-based weekly period and use
+only completed Silver orders with `quality_check_result = 'PASS'`.
 
 ---
 
@@ -1563,7 +1571,7 @@ The project is complete when:
 - [ ] Invalid rows remain available and are flagged.
 - [ ] Quality metrics report passed/failed results.
 - [ ] Tests demonstrate that seeded quality issues are caught.
-- [ ] Three mandatory Gold aggregations exist.
+- [ ] Four Gold aggregations exist, including daily/weekly sales trends.
 - [ ] Gold calculations have been validated.
 - [ ] Dashboard contains at least three required visualizations.
 - [ ] Database setup scripts and notes exist.

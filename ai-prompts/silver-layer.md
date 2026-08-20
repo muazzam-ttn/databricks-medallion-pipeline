@@ -602,3 +602,409 @@ read Bronze
 ```
 
 Quality metrics will also be derived from the resulting validation columns once the final Silver representation is available.
+
+---
+
+# Prompt 2 — Compose Final Silver Tables
+
+## Prompt Sent
+
+Cursor was asked to implement:
+
+```text
+src/silver/create_silver_tables.py
+```
+
+using the five previously generated quality-validation modules.
+
+The task was to:
+
+* read the three Bronze Delta tables,
+* apply all five validation dimensions,
+* preserve all Bronze rows,
+* generate final quality metadata,
+* write the Silver Delta tables,
+* perform source-to-Silver row-count reconciliation,
+* stop before quality-metrics persistence, Gold, or dashboard work.
+
+The expected Silver quality columns were:
+
+```text
+completeness_pass
+uniqueness_pass
+type_validation_pass
+referential_integrity_pass
+business_logic_pass
+quality_check_result
+quality_failure_reasons
+```
+
+Cursor was instructed to use the existing validation modules rather than reimplementing their logic.
+
+---
+
+# AI Response Summary
+
+Cursor created:
+
+```text
+src/silver/create_silver_tables.py
+```
+
+The script acts as the orchestration layer for the Silver pipeline.
+
+Its execution flow is:
+
+```text
+Read Bronze tables
+        ↓
+Apply completeness validation
+        ↓
+Apply uniqueness validation
+        ↓
+Apply type validation
+        ↓
+Apply referential integrity validation
+        ↓
+Apply business logic validation
+        ↓
+Generate specific failure reasons
+        ↓
+Generate overall PASS / FAIL
+        ↓
+Write Silver Delta tables
+        ↓
+Verify row preservation
+        ↓
+Print runtime quality summary
+```
+
+The script reads:
+
+```text
+ecommerce_sales.bronze.customers
+ecommerce_sales.bronze.orders
+ecommerce_sales.bronze.products
+```
+
+and writes:
+
+```text
+ecommerce_sales.silver.customers
+ecommerce_sales.silver.orders
+ecommerce_sales.silver.products
+```
+
+---
+
+# How the Validation Modules Are Executed
+
+The five quality files are treated as reusable Python modules rather than independent pipeline scripts.
+
+The final Silver script imports:
+
+```text
+01_quality_completeness.py
+02_quality_uniqueness.py
+03_quality_type_validation.py
+04_quality_referential_integrity.py
+05_quality_business_logic.py
+```
+
+using Python's `importlib.import_module()` because the filenames begin with numbers and therefore cannot be referenced using normal static Python import syntax.
+
+The individual validation files are not run separately.
+
+Instead:
+
+```text
+create_silver_tables.py
+```
+
+imports their functions and executes them sequentially against the Bronze DataFrames.
+
+This preserves the intended architecture:
+
+```text
+validation modules
+        ↓
+Silver orchestration
+        ↓
+persisted Silver tables
+```
+
+rather than having each quality script independently write tables.
+
+---
+
+# What I Accepted
+
+## 1. Central Silver Orchestration
+
+Cursor kept persistence inside:
+
+```text
+create_silver_tables.py
+```
+
+rather than distributing table-write logic across the five quality modules.
+
+### Why accepted
+
+This cleanly separates:
+
+```text
+validation responsibility
+```
+
+from:
+
+```text
+pipeline orchestration and persistence
+```
+
+and avoids competing versions of the Silver tables.
+
+---
+
+## 2. Sequential Composition of Quality Dimensions
+
+For each dataset, Cursor applies the validation functions sequentially.
+
+Conceptually:
+
+```text
+Bronze DataFrame
+        ↓
++ completeness_pass
+        ↓
++ uniqueness_pass
+        ↓
++ type_validation_pass
+        ↓
++ referential_integrity_pass
+        ↓
++ business_logic_pass
+```
+
+### Why accepted
+
+Each quality module contributes only one dimension while preserving the DataFrame for subsequent checks.
+
+This keeps the validation logic modular and readable.
+
+---
+
+## 3. Overall Quality Result
+
+Cursor creates:
+
+```text
+quality_check_result
+```
+
+with:
+
+```text
+PASS
+```
+
+only when all five quality dimensions pass.
+
+Otherwise the record receives:
+
+```text
+FAIL
+```
+
+### Why accepted
+
+This provides a simple final record-level quality indicator while still retaining the underlying dimension-level results.
+
+---
+
+## 4. Specific Failure Reasons
+
+Cursor creates:
+
+```text
+quality_failure_reasons
+```
+
+as an array of specific failure identifiers.
+
+Examples include:
+
+```text
+NULL_EMAIL
+DUPLICATE_CUSTOMER_ID
+NULL_CUSTOMER_ID
+NULL_PRODUCT_ID
+DUPLICATE_ORDER_ID
+INVALID_CUSTOMER_REFERENCE
+INVALID_PRODUCT_REFERENCE
+TYPE_VALIDATION_FAILED
+INVALID_ORDER_STATUS
+TOTAL_AMOUNT_MISMATCH
+```
+
+### Why accepted
+
+A single:
+
+```text
+quality_check_result = FAIL
+```
+
+would not explain why a record failed.
+
+Specific failure reasons make the Silver tables easier to:
+
+* inspect,
+* debug,
+* aggregate into quality metrics,
+* explain during review.
+
+---
+
+# Databricks Module Import Decision
+
+A question arose about whether the five validation modules should be executed using Databricks:
+
+```text
+%run
+```
+
+or imported as Python modules.
+
+The existing implementation uses:
+
+```python
+from importlib import import_module
+```
+
+and loads the sibling validation files as Python modules.
+
+The files are stored together under:
+
+```text
+src/silver/
+```
+
+and the import-based implementation worked successfully in the Databricks runtime.
+
+### Decision
+
+Keep Python module imports.
+
+Do not replace them with `%run`.
+
+### Why
+
+The quality scripts are reusable Python modules containing functions, not independent notebooks that need to execute into the current notebook namespace.
+
+The import-based approach gives a cleaner modular structure:
+
+```text
+quality definitions
+→ imported functions
+→ orchestration
+```
+
+and avoids notebook-specific coupling.
+
+---
+
+# What I Changed
+
+No code modification was required after the final Silver composition script was executed.
+
+The import-based module approach worked successfully in Databricks.
+
+The implementation was therefore retained.
+
+---
+
+# What I Rejected / Did Not Add
+
+## 1. `%run`
+
+Not introduced.
+
+### Reason
+
+Python module imports worked correctly and better match the modular design.
+
+---
+
+## 2. Independent Execution of Validation Files
+
+The five quality scripts are not executed separately.
+
+### Reason
+
+They are reusable transformation libraries.
+
+The Silver orchestration script is the executable entry point.
+
+---
+
+# Final Decision
+
+**ACCEPTED**
+
+The final Silver orchestration successfully:
+
+* imports the five quality modules,
+* executes their validation functions,
+* preserves Bronze records,
+* creates dimension-level quality flags,
+* creates specific failure reasons,
+* creates an overall PASS/FAIL result,
+* writes managed Delta Silver tables,
+* verifies row preservation,
+* works correctly in the Databricks runtime.
+
+The module-import architecture is therefore retained.
+
+---
+
+# Checkpoint Status
+
+Silver validation implementation:
+
+```text
+COMPLETE
+```
+
+Silver Delta tables:
+
+```text
+CREATED
+```
+
+Module imports:
+
+```text
+VALIDATED IN DATABRICKS
+```
+
+Row preservation:
+
+```text
+VALIDATED
+```
+
+Remaining Checkpoint 4 task:
+
+```text
+Create and validate Silver quality metrics
+```
+
+The next intended artifact is:
+
+```text
+ecommerce_sales.silver.quality_metrics
+```
+
+which should summarize rule-level data quality results and pass percentages.

@@ -1146,16 +1146,11 @@ Create business-ready analytical tables from trusted Silver data.
 ```text
 src/gold/01_sales_by_product.sql
 src/gold/02_revenue_by_customer.sql
+src/gold/03_daily_weekly_trends.sql
 src/gold/04_customer_segmentation.sql
 src/gold/create_gold_tables.py
 
 ai-prompts/gold-layer.md
-```
-
-Optional:
-
-```text
-src/gold/03_daily_weekly_trends.sql
 ```
 
 ---
@@ -1380,6 +1375,7 @@ Before dashboard work:
 - [ ] Analytics eligibility documented.
 - [ ] Sales by Product exists.
 - [ ] Revenue by Customer exists.
+- [ ] Daily/Weekly Sales Trends exists.
 - [ ] Customer Segmentation exists.
 - [ ] Gold grains are unique.
 - [ ] Aggregations have been manually spot-checked.
@@ -1819,7 +1815,7 @@ The project is ready when:
 - [ ] Silver validations work.
 - [ ] Quality metrics work.
 - [ ] Quality tests demonstrate seeded problems are detected.
-- [ ] Three mandatory Gold outputs work.
+- [ ] Four Gold outputs work, including Daily/Weekly Sales Trends.
 - [ ] Three dashboard visualizations exist.
 - [ ] Setup/database files exist.
 - [ ] README works.
@@ -1834,21 +1830,22 @@ The project is ready when:
 
 ---
 
-# 34. Optional Stretch Task
+# 34. Implemented Gold Extension
 
-Only after the final mandatory gate is satisfied, consider:
+The daily/weekly sales trends output is implemented in:
 
 ```text
 src/gold/03_daily_weekly_trends.sql
 ```
 
-Do not implement optional scope at the expense of:
+It creates:
 
-- testing,
-- documentation,
-- debugging evidence,
-- prompt history,
-- reflection.
+```text
+ecommerce_sales.gold.daily_weekly_trends
+```
+
+The output contains daily and Monday-based weekly aggregations of qualifying
+completed Silver orders and is validated as part of the Gold runner.
 
 ---
 

@@ -48,7 +48,6 @@ Unless required later, the following are intentionally excluded:
 - Performance benchmarking at production scale.
 - Machine learning or recommendation models.
 - Complex dimensional modeling beyond the required Gold outputs.
-- Optional Gold daily/weekly trend analysis unless sufficient time remains.
 
 The project is intentionally kept within the expected 20–25 focused development-hour scope.
 
@@ -389,13 +388,30 @@ The classification logic must be:
 
 ---
 
-## FR-18 — Optional Gold: Daily/Weekly Trends
+## FR-18 — Gold: Daily/Weekly Sales Trends
 
-`03_daily_weekly_trends.sql` exists in the requested repository structure but is not listed as one of the three mandatory Gold aggregations.
+Create `ecommerce_sales.gold.daily_weekly_trends` from qualifying completed
+Silver orders.
 
-It will therefore be treated as an optional/stretch artifact.
+Required columns:
 
-It should only be implemented after all mandatory requirements, documentation, and validation are complete.
+```text
+period_type
+period_start
+total_orders
+total_revenue
+avg_order_value
+```
+
+The dataset must:
+
+- include both `DAILY` and `WEEKLY` period types,
+- use the calendar date as the daily `period_start`,
+- use the Monday week start as the weekly `period_start`,
+- include only orders with `quality_check_result = 'PASS'`,
+- include only `Completed` orders,
+- have one row per `period_type` and `period_start`,
+- support downstream trend analysis and optional dashboard extensions.
 
 ---
 
@@ -967,6 +983,7 @@ The project will be considered functionally complete when:
 - [ ] Sales by Product Gold table is correct.
 - [ ] Revenue by Customer Gold table is correct.
 - [ ] Customer Segmentation Gold table is correct.
+- [ ] Daily/Weekly Sales Trends Gold table is correct.
 - [ ] Dashboard SQL includes at least three required visualizations.
 - [ ] Dashboard creation/configuration is documented.
 - [ ] Database setup instructions are present.

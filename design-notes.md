@@ -255,6 +255,7 @@ silver.quality_metrics
 gold.sales_by_product
 gold.revenue_by_customer
 gold.customer_segmentation
+gold.daily_weekly_trends
 ```
 
 If the selected Databricks environment does not support separate schemas conveniently, a naming-prefix approach may be used instead:
@@ -780,11 +781,12 @@ This should be reviewed after actual data-quality metrics are available.
 
 Gold tables represent business-ready outputs.
 
-The three mandatory aggregations are:
+The four Gold aggregations are:
 
 1. Sales by Product
 2. Revenue by Customer
 3. Customer Segmentation
+4. Daily/Weekly Sales Trends
 
 ---
 
@@ -977,17 +979,39 @@ Without this, the `Inactive` segment would disappear.
 
 ---
 
-# 18. Optional Daily/Weekly Trends
+# 18. Gold — Daily/Weekly Sales Trends
 
-`03_daily_weekly_trends.sql` will remain in the repository structure.
+Implementation:
 
-It is optional.
+```text
+src/gold/03_daily_weekly_trends.sql
+```
 
-It should not be implemented until:
+Target table:
 
-- mandatory pipeline works,
-- testing is complete,
-- required documentation is complete.
+```text
+ecommerce_sales.gold.daily_weekly_trends
+```
+
+Grain:
+
+> One row per `period_type` and `period_start`.
+
+The table contains daily and Monday-based weekly aggregations of Silver orders
+that passed all quality checks and have `order_status = 'Completed'`.
+
+Columns:
+
+```text
+period_type
+period_start
+total_orders
+total_revenue
+avg_order_value
+```
+
+Daily and weekly order and revenue totals are reconciled independently against
+the same qualifying Silver order population.
 
 ---
 

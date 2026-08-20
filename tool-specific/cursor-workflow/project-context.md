@@ -486,6 +486,7 @@ The mandatory Gold outputs are:
 gold.sales_by_product
 gold.revenue_by_customer
 gold.customer_segmentation
+gold.daily_weekly_trends
 ```
 
 ---
@@ -540,6 +541,23 @@ Repeat
 One-Time
 Inactive
 ```
+
+---
+
+## Daily/Weekly Sales Trends
+
+Required fields:
+
+```text
+period_type
+period_start
+total_orders
+total_revenue
+avg_order_value
+```
+
+The implemented table uses qualifying completed Silver orders and provides one
+row per daily or Monday-based weekly period.
 
 ---
 
