@@ -2,7 +2,7 @@
 
 ## 1. Purpose
 
-This document describes how I use AI tools during the Databricks Medallion Architecture project.
+This document describes how I used AI tools during the Databricks Medallion Architecture project.
 
 The primary AI development tool for this exercise is:
 
@@ -12,7 +12,7 @@ Cursor
 
 The objective is not to use AI only as a code generator.
 
-Instead, AI is used across the data engineering lifecycle for:
+Instead, I used AI across the data engineering lifecycle for:
 
 ```text
 requirements
@@ -27,7 +27,8 @@ requirements
 
 The final engineering decisions and validation remain my responsibility.
 
-This document will be updated throughout the exercise so that it reflects the workflow actually followed rather than only the workflow originally planned.
+This final version reflects the workflow actually followed and distinguishes
+implemented behavior from work that was only planned or statically reviewed.
 
 ---
 
@@ -39,7 +40,9 @@ Primary tool:
 Cursor
 ```
 
-Cursor is used because it can work directly with repository context and allows project requirements, design documentation, code, and implementation instructions to be considered together.
+I used Cursor because it can work directly with repository context and consider
+project requirements, design documentation, code, and implementation
+instructions together.
 
 The project intentionally provides Cursor with persistent repository context instead of repeatedly using isolated prompts with no background information.
 
@@ -160,7 +163,8 @@ It leaves many decisions open to the AI, including:
 - testing expectations,
 - project scope.
 
-Instead, each implementation prompt will direct Cursor to read the relevant project documents first.
+Instead, each implementation prompt directed Cursor to read the relevant
+project documents first.
 
 The expected pattern is:
 
@@ -172,13 +176,25 @@ task-specific prompt
 validation requirements
 ```
 
-This reduces the likelihood that AI silently invents architecture or business logic.
+This reduced the likelihood that AI silently invented architecture or business
+logic.
+
+The first implementation prompts were deliberately detailed while the project
+contracts were still being established. For example, the data-generation
+prompt repeated exact row counts, defect counts, duplicate semantics, and
+validation requirements. Later prompts became shorter because those decisions
+were already stored in the repository and could be referenced directly.
+
+The Gold and dashboard prompts therefore focused mainly on the active business
+decisions and allowed files instead of restating the complete pipeline. This
+made the interaction more efficient without removing the source of truth.
 
 ---
 
 # 5. How AI Is Used for Requirement Analysis
 
-AI is used as a discussion and analysis partner rather than being asked immediately to generate code.
+I used AI as a discussion and analysis partner rather than asking it
+immediately to generate code.
 
 The requirements workflow is:
 
@@ -196,22 +212,25 @@ Identify edge cases
 Create acceptance criteria
 ```
 
-An important rule is that ambiguous requirements remain visible.
+An important rule was to keep ambiguous requirements visible.
 
-For example, the project identifies unresolved questions around:
+During planning, the unresolved questions included:
 
 - the exact definition of `lifetime_value_actual`,
 - which order statuses count as revenue,
 - how High-Value customers are classified,
 - how duplicate-row counts should be interpreted.
 
-AI should not silently convert these uncertainties into business requirements.
+I did not allow Cursor to silently convert those uncertainties into business
+requirements. I later supplied the Gold decisions explicitly: Completed orders
+define revenue, `lifetime_value_actual` is qualifying completed-order revenue,
+and the top revenue quintile defines High-Value customers.
 
 ---
 
 # 6. How AI Is Used for Pipeline Design
 
-AI assists with architecture discussions before implementation.
+AI assisted with architecture discussions before implementation.
 
 The approved high-level architecture is:
 
@@ -265,15 +284,15 @@ The dashboard uses Gold data rather than rebuilding business logic directly agai
 
 # 7. How AI Is Used for Code Generation
 
-Code generation follows small, focused tasks.
+Code generation followed small, focused tasks.
 
-The project is not implemented using one prompt such as:
+I did not implement the project using one prompt such as:
 
 ```text
 Generate the complete repository.
 ```
 
-Instead, development follows checkpoints:
+Instead, development followed checkpoints:
 
 ```text
 Checkpoint 1
@@ -298,7 +317,7 @@ Checkpoint 7
 Final Validation & Documentation
 ```
 
-Within each checkpoint, tasks are further divided.
+Within each checkpoint, I divided the work further.
 
 For example, Silver implementation is separated into:
 
@@ -313,13 +332,58 @@ quality metrics
 tests
 ```
 
-This allows AI-generated work to be reviewed and validated before additional complexity is introduced.
+This allowed me to review AI-generated work before introducing the next layer.
+
+## What Cursor helped me produce by checkpoint
+
+### Data generation
+
+Cursor implemented the pandas/Faker generator, deterministic seeds, fixed-row
+duplicate strategy, exact defect injection, validation assertions, generated
+CSV files, and generation notes. I rejected adding extra defects to force the
+data toward an approximate issue count.
+
+### Bronze
+
+Cursor produced three PySpark ingestion scripts, Unity Catalog Volume paths,
+Delta overwrite behavior, `_ingested_at`, inferred-schema output, and
+source-to-Bronze count checks. I removed its unnecessary active Spark-session
+lookup.
+
+### Silver
+
+Cursor produced five focused DataFrame validation modules and the final
+orchestration script. The implementation preserves rows, uses distinct parent
+keys for referential checks, records dimension flags and specific failure
+reasons, and writes rerun-safe Silver Delta tables. I kept Python module imports
+after validating them in Databricks rather than changing to `%run`.
+
+### Gold
+
+Cursor produced SQL for sales by product, revenue by customer, customer
+segmentation, and daily/weekly trends. I supplied the business rules rather
+than allowing them to be inferred: Completed orders only, PASS Silver rows,
+actual lifetime value from qualifying revenue, and a top-20-percent High-Value
+segment. The Python runner adds grain and reconciliation checks.
+
+### Dashboard
+
+Cursor produced Gold-only SQL for the three required visualizations and an
+optional weekly trend, plus a guide covering field mappings, filters, and
+interpretation. No dashboard query rebuilds logic from Silver.
+
+### Documentation
+
+Cursor helped organize planning documents, checkpoint prompt histories, setup
+notes, generation notes, the dashboard guide, and debugging notes. I reviewed
+runtime claims against the recorded evidence and avoided describing unrecorded
+runs as successful.
 
 ---
 
 # 8. Standard Implementation Prompt Pattern
 
-Implementation prompts sent to Cursor should generally contain:
+Implementation prompts sent to Cursor generally contained:
 
 ```text
 1. Active checkpoint
@@ -362,6 +426,22 @@ After implementation:
 - stop
 ```
 
+I also used lightweight role-based prompting, such as:
+
+```text
+Act as a senior Databricks data engineer
+```
+
+or:
+
+```text
+Act as a senior Databricks analytics engineer
+```
+
+The role statement was only a short framing device. The actual control came
+from the repository context, explicit requirements, file scope, and validation
+criteria. I did not rely on a long persona prompt to determine correctness.
+
 ---
 
 # 9. How AI-Generated Code Is Validated
@@ -378,7 +458,8 @@ or:
 it runs without an exception
 ```
 
-Validation should check behavior.
+I validated behavior where the available runtime allowed it and recorded when
+only static validation was available.
 
 The general workflow is:
 
@@ -402,7 +483,7 @@ Accept change
 
 # 10. Validation Approach — Data Generation
 
-The synthetic generator will have known expected defects.
+The synthetic generator has known expected defects.
 
 Therefore validation can compare expected and actual conditions.
 
@@ -416,7 +497,7 @@ Actual:
 count rows where email IS NULL
 ```
 
-Similar checks will verify:
+The generator also verified:
 
 ```text
 100 NULL order customer IDs
@@ -427,13 +508,16 @@ customer duplicate condition
 order duplicate condition
 ```
 
-This creates a deterministic validation target for AI-generated logic.
+This created a deterministic validation target for AI-generated logic. I ran
+the generator locally and checked the exact physical row counts, NULL counts,
+orphan counts, duplicate-group semantics, and product-key uniqueness before
+accepting the generated CSV files.
 
 ---
 
 # 11. Validation Approach — Bronze
 
-Bronze validation will focus on preservation.
+Bronze validation focused on preservation.
 
 Examples:
 
@@ -445,7 +529,7 @@ Bronze row count
 
 and intentional defects must still exist.
 
-Bronze will also be checked for:
+The Bronze scripts also check:
 
 - expected schema,
 - ingestion timestamp,
@@ -456,7 +540,7 @@ Bronze will also be checked for:
 
 # 12. Validation Approach — Silver
 
-Silver validation will verify both detection and preservation.
+Silver validation covered both detection and preservation.
 
 Examples:
 
@@ -472,15 +556,17 @@ Bronze row count = Silver row count
 referential joins do not multiply orders
 ```
 
-Individual quality failure reasons will also be inspected.
+The composed Silver layer retained specific failure reasons. Its module imports,
+validation functions, Delta writes, and row preservation were executed
+successfully in Databricks.
 
 ---
 
 # 13. Validation Approach — Gold
 
-Gold validation will not rely only on successful SQL execution.
+Gold validation was designed not to rely only on successful SQL execution.
 
-Checks will include:
+The runner includes checks for:
 
 - table grain,
 - uniqueness,
@@ -494,21 +580,25 @@ For example:
 gold.sales_by_product
 ```
 
-should have:
+was expected to have:
 
 ```text
 one row per product_id
 ```
 
-and selected totals should be reproducible from eligible Silver orders.
+and selected totals are designed to be reproducible from eligible Silver
+orders. I corrected the Gold runner's notebook path handling after the
+`__file__` error. A complete post-fix Gold rerun is not recorded in the
+repository evidence, so I leave that runtime result open.
 
 ---
 
 # 14. Validation Approach — Dashboard
 
-Dashboard SQL will be run independently before visualizations are configured.
-
-After dashboard creation, displayed values will be compared against the Gold tables.
+I created dashboard SQL that reads only the Gold tables and documented the
+Databricks visualization mappings. Static checks confirmed that the queries do
+not reference Bronze or Silver. The repository does not record completed
+dashboard runtime/configuration validation, so I do not claim it here.
 
 Required views include:
 
@@ -524,9 +614,10 @@ Customer segmentation
 
 # 15. How AI Is Used for Testing
 
-AI assists with identifying useful test scenarios and generating focused test logic.
+AI assisted with identifying useful test scenarios and generating focused
+validation logic.
 
-Testing should verify behavior, not simply execution.
+I treated testing as verification of behavior, not simply execution.
 
 The most important testing tier for this exercise is:
 
@@ -536,9 +627,10 @@ data-quality detection tests
 
 because the project intentionally creates known defective records.
 
-Tests should prove that the Silver layer identifies them correctly.
+The Silver checks were designed to prove that the known defects were identified
+without dropping rows.
 
-Additional integration validations will check:
+Additional integration validations were built around:
 
 ```text
 CSV → Bronze
@@ -552,7 +644,8 @@ Silver → Gold
 
 # 16. How AI Is Used for Debugging
 
-When an implementation problem occurs, AI may be used to help form hypotheses.
+When implementation problems occurred, I used AI to help form hypotheses and
+small fixes.
 
 The debugging workflow is:
 
@@ -578,22 +671,16 @@ Document result
 
 AI explanations are treated as hypotheses until verified.
 
-Debugging interactions will be documented in:
-
-```text
-debugging-notes.md
-ai-prompts/debugging.md
-```
-
-Only real debugging issues will be recorded.
-
-No bugs will be intentionally created merely to demonstrate debugging activity.
+The actual issues were the unnecessary Bronze Spark-session lookup, the Silver
+module import decision, and the Gold notebook's missing `__file__`. They are
+documented in `debugging-notes.md`. I did not create artificial failures to
+make the debugging history look larger.
 
 ---
 
 # 17. How AI Is Used for Data Quality
 
-AI assists with:
+AI assisted with:
 
 - defining quality rules,
 - checking whether the rules match the requirements,
@@ -604,7 +691,7 @@ AI assists with:
 
 However, the expected quality conditions originate from the project requirements and approved data-quality strategy.
 
-AI should not arbitrarily redefine quality requirements.
+I did not allow AI to arbitrarily redefine quality requirements.
 
 ---
 
@@ -660,7 +747,7 @@ Invalid records remain available for investigation and quality reporting.
 
 # 20. How AI Is Used for Documentation
 
-AI assists with:
+AI assisted with:
 
 - document organization,
 - translating implementation details into clear explanations,
@@ -687,19 +774,20 @@ AI usage is recorded by activity under:
 ai-prompts/
 ```
 
-Files include:
+The prompt-history files present in this repository are:
 
 ```text
 data-generation.md
 bronze-layer.md
 silver-layer.md
 gold-layer.md
-dashboard.md
-debugging.md
-documentation.md
 ```
 
-For meaningful interactions, the record should include:
+Dashboard and documentation work is represented by the resulting implementation
+files and this finalized workflow document rather than by prompt-history files
+that do not exist.
+
+For meaningful interactions, I recorded:
 
 ```text
 Prompt sent
@@ -731,32 +819,32 @@ AI suggestions fall into three categories.
 
 ## Accepted
 
-A suggestion may be accepted when:
+I accepted a suggestion when:
 
-- it matches approved requirements,
-- the reasoning is sound,
-- it keeps the solution appropriately scoped,
-- validation confirms the behavior.
+- it matched approved requirements,
+- the reasoning was sound,
+- it kept the solution appropriately scoped,
+- validation confirmed the behavior.
 
 ## Changed
 
-A suggestion may be modified when:
+I modified a suggestion when:
 
-- the core idea is useful,
-- but implementation details do not fit the environment or project design.
+- the core idea was useful,
+- but implementation details did not fit the environment or project design.
 
 ## Rejected
 
-A suggestion should be rejected when:
+I rejected a suggestion when it:
 
-- it violates the architecture,
-- invents unsupported business requirements,
-- unnecessarily expands scope,
-- conflicts with the data model,
-- cannot be validated,
-- introduces unnecessary complexity.
+- violated the architecture,
+- invented unsupported business requirements,
+- unnecessarily expanded scope,
+- conflicted with the data model,
+- could not be validated,
+- introduced unnecessary complexity.
 
-The reason for important rejections should be documented.
+I documented the reason for important rejections.
 
 ---
 
@@ -838,7 +926,7 @@ The objective is to provide enough information to solve the engineering problem 
 
 # 25. Human Ownership
 
-AI assists with implementation, but responsibility remains with the engineer.
+Cursor assisted me with implementation, but responsibility remained with me.
 
 I remain responsible for:
 
@@ -855,7 +943,7 @@ A Cursor-generated solution is not considered complete until it has been reviewe
 
 # 26. Reusable Workflow
 
-The intended reusable workflow is:
+The reusable workflow I followed is:
 
 ```text
 Understand problem
@@ -881,8 +969,6 @@ Validate
 Refine
         ↓
 Document
-        ↓
-Commit
 ```
 
 This workflow can be adapted to production data engineering projects with stricter privacy, security, testing, review, and deployment controls.
@@ -891,65 +977,134 @@ This workflow can be adapted to production data engineering projects with strict
 
 # 27. Current Project Status
 
-Current checkpoint:
+The implemented repository now includes:
 
 ```text
-Checkpoint 1 — Planning & Cursor Context
+deterministic synthetic data generation
+Bronze CSV ingestion
+Silver quality validation and persisted Silver tables
+four Gold analytical outputs
+dashboard SQL and dashboard setup guidance
 ```
 
-Planning has been completed before generating implementation code.
-
-The next checkpoint is:
-
-```text
-Checkpoint 2 — Synthetic Data Generation
-```
-
-No Bronze, Silver, Gold, or dashboard implementation should begin until the data-generation checkpoint has been validated.
+The Silver orchestration and its Python module imports were validated in
+Databricks. The Gold runner was corrected after the notebook environment raised
+a `NameError` for `__file__`; the repository does not contain evidence of a
+complete Gold rerun after that correction, so I do not describe that rerun as
+passed here. Dashboard queries and documentation were checked statically
+against the Gold-only source requirement.
 
 ---
 
-# 28. Sections to Update During the Project
+# 28. What AI Helped With Most
 
-The following parts of this document must be revisited before final submission.
+Cursor was most useful when the task had a clear contract and a narrow file
+scope. It helped me turn the planning documents into:
 
-## What AI Helped With Most
+- deterministic generation code with exact defect assertions,
+- repetitive but consistent Bronze ingestion scripts,
+- reusable Silver validation functions,
+- readable Gold SQL and validation checks,
+- visualization-ready dashboard queries,
+- structured implementation and debugging documentation.
 
-**Status:** To be completed from actual project experience.
+The strongest results came from giving Cursor the rule, the allowed files, the
+validation expectation, and an explicit stop condition.
 
 ## What AI Got Wrong
 
-**Status:** To be completed from actual Cursor interactions.
+Cursor initially added `SparkSession.getActiveSession()` to the Bronze scripts.
+That was generic Python/Spark boilerplate rather than a requirement of this
+Databricks-only environment, so I removed it.
+
+Cursor also used `Path(__file__)` in the Gold runner. That works in a normal
+Python script but failed in the Databricks notebook with:
+
+```text
+NameError: name '__file__' is not defined
+```
+
+I changed the runner to use `Path.cwd()`. This was a reminder that plausible
+local Python patterns still need validation in the actual notebook runtime.
 
 ## What I Changed or Rejected
 
-**Status:** To be completed from actual prompt history.
+I changed or rejected several suggestions and possible extensions:
+
+- I removed explicit Spark-session retrieval and used Databricks' built-in
+  `spark`.
+- I did not add unspecified defects merely to make the approximate “~700”
+  statement match; I kept the explicit seeded counts.
+- I kept pandas and Faker for local data generation rather than introducing
+  PySpark for a small generation workload.
+- I did not add malformed types or extra business-rule failures that were not
+  required.
+- I considered `%run` for the numerically prefixed Silver files but retained
+  `importlib.import_module()` after it worked in Databricks.
+- I kept dashboard queries on Gold tables and did not recreate Silver or Gold
+  business logic in the dashboard layer.
 
 ## Debugging Experience
 
-**Status:** To be completed from actual issues encountered.
+The actual debugging work was small but useful:
+
+1. I removed the unnecessary Bronze active-session lookup.
+2. I tested Python module imports against `%run` and retained imports after
+   Databricks execution succeeded.
+3. I replaced the Gold runner's `__file__` path logic after the Databricks
+   notebook raised a `NameError`.
+
+The detailed observations, decisions, and validation evidence are recorded in
+`debugging-notes.md`.
 
 ## Lessons Learned
 
-**Status:** To be completed after the end-to-end pipeline is complete.
+Persistent context improved consistency, but it did not remove the need for
+runtime review. Cursor followed detailed data-quality and scope constraints
+well, while environment-specific assumptions still required my intervention.
+
+I also found that deterministic data made downstream validation much easier.
+Because the defect counts and duplicate semantics were fixed, I could reason
+about expected Silver failures instead of treating every discrepancy as an
+unknown.
 
 ## What I Would Do Differently in Production
 
-**Status:** To be finalized during reflection.
+For production work I would:
+
+- package Python modules with conventional identifiers instead of numeric
+  filenames requiring dynamic imports,
+- use explicit source schemas and a controlled schema-evolution policy rather
+  than relying only on CSV inference,
+- move catalog, schema, and storage paths into reviewed environment
+  configuration,
+- use incremental ingestion and idempotent keys where the source process
+  requires them instead of snapshot overwrite,
+- add automated unit, integration, and deployment checks,
+- persist quality metrics and connect them to monitoring and alerting,
+- record run IDs and richer lineage/audit metadata,
+- validate notebook filesystem behavior before using local path assumptions,
+- apply production access controls and secret management.
+
+I would still use sanitized schemas, synthetic examples, and minimal
+reproducible samples when asking AI for help.
 
 ---
 
-# 29. Planned Final Review
+# 29. Evidence Used for This Finalization
 
-Before submission, this document should be reviewed against:
+I finalized this document against:
 
 ```text
-ai-prompts/*
+ai-prompts/data-generation.md
+ai-prompts/bronze-layer.md
+ai-prompts/silver-layer.md
+ai-prompts/gold-layer.md
 debugging-notes.md
-reflection.md
-final-ai-usage-summary.md
-Git history
-final implementation
+requirements-analysis.md
+design-notes.md
+the implemented pipeline and dashboard files
 ```
 
-Any statement describing AI usage should be supported by what actually happened during the project.
+Statements about runtime success are limited to results recorded in those
+artifacts.
